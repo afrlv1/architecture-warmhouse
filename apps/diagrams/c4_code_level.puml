@@ -1,0 +1,27 @@
+@startuml
+class ProvisioningManager {
+    +startProvision()
+    +verifyDevice()
+    +registerDevice()
+}
+
+class DeviceVerifier {
+    +checkProtocol()
+    +checkSignature()
+}
+
+class DeviceRegistry {
+    +saveDevice()
+    +assignToUser()
+}
+
+class ProtocolAdapter {
+    +sendInitCommand()
+    +readDeviceInfo()
+}
+
+ProvisioningManager --> DeviceVerifier
+ProvisioningManager --> DeviceRegistry
+ProvisioningManager --> ProtocolAdapter
+
+@enduml
