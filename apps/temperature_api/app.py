@@ -9,6 +9,7 @@ app = FastAPI()
 def get_temperature(location: str = Query(...)):
     return {
         "value": round(random.uniform(-20, 35), 2),
+        "status": "online",
     }
 
 
@@ -19,4 +20,5 @@ def get_temperature_by_id(sensor_id: str):
 
     return {
         "value": round(random.uniform(-20, 35), 2),
+        "status": "online",
     }
