@@ -15,7 +15,6 @@ def get_temperature(location: str = Query(...)):
 
 @app.get("/temperature/{sensor_id}")
 def get_temperature_by_id(sensor_id: str):
-    # Раз нет хардкода — просто используем sensor_id как строку для "локации"
     location = f"sensor-{sensor_id}"
 
     return {
