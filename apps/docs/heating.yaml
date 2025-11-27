@@ -1,0 +1,57 @@
+openapi: 3.0.3
+info:
+  title: Heating Service API
+  version: 1.0.0
+
+paths:
+  /heating/{device_id}/state:
+    get:
+      summary: Получение состояния отопления
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Текущее состояние устройства отопления
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_id:
+                    type: string
+                  current_temp:
+                    type: number
+                  target_temp:
+                    type: number
+                  mode:
+                    type: string
+        "404":
+          description: Устройство не найдено
+
+  /heating/{device_id}/set:
+    post:
+      summary: Установка целевой температуры
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target_temp:
+                  type: number
+      responses:
+        "202":
+          description: Команда принята
+        "404":
+          description: Устройство не найдено

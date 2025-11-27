@@ -1,0 +1,51 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "Пользователь")
+
+System_Boundary(system, "Экосистема «Тёплый дом»") {
+
+  Container(web, "Web Client", "SPA", "UI")
+  Container(gateway, "API Gateway", "Nginx/Go/Node", "Единая точка входа")
+
+  Container(auth, "User Management Service", "Go/Node", "Пользователи, токены")
+  Container(devices, "Device Management Service", "Go/FastAPI", "Устройства, типы, модули")
+  Container(heating, "Heating Service", "Go", "Управление отоплением")
+  Container(lighting, "Lighting Service", "Go", "Управление освещением")
+  Container(gates, "Gates Service", "Go", "Управление воротами")
+  Container(scenario, "Scenario Service", "Go", "Сценарии автоматизации")
+  Container(telemetry, "Telemetry Service", "Go", "Приём и хранение телеметрии")
+
+  ContainerDb(db_users, "Users DB", "PostgreSQL", "")
+  ContainerDb(db_devices, "Devices DB", "PostgreSQL", "")
+  ContainerDb(db_heating, "Heating DB", "PostgreSQL", "")
+  ContainerDb(db_lighting, "Lighting DB", "PostgreSQL", "")
+  ContainerDb(db_gates, "Gates DB", "PostgreSQL", "")
+  ContainerDb(db_scenario, "Scenario DB", "PostgreSQL", "")
+  ContainerDb(db_telemetry, "Telemetry DB", "TS/PostgreSQL", "")
+
+  Container(broker, "Message Broker", "RabbitMQ/Kafka", "События телеметрии и сценариев")
+}
+
+Rel(user, web, "Использует")
+Rel(web, gateway, "HTTP")
+Rel(gateway, auth, "HTTP")
+Rel(gateway, devices, "HTTP")
+Rel(gateway, heating, "HTTP")
+Rel(gateway, lighting, "HTTP")
+Rel(gateway, gates, "HTTP")
+Rel(gateway, scenario, "HTTP")
+
+Rel(devices, db_devices, "Чтение/запись")
+Rel(heating, db_heating, "Чтение/запись")
+Rel(lighting, db_lighting, "Чтение/запись")
+Rel(gates, db_gates, "Чтение/запись")
+Rel(auth, db_users, "Чтение/запись")
+Rel(scenario, db_scenario, "Чтение/запись")
+Rel(telemetry, db_telemetry, "Запись")
+
+Rel(devices, broker, "Публикация телеметрии")
+Rel(telemetry, broker, "Подписка")
+Rel(scenario, broker, "Подписка на события")
+
+@enduml

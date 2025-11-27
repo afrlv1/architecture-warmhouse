@@ -1,0 +1,19 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Container(devices, "Device Management Service", "Go")
+
+Component(api, "Device API", "REST", "Методы управления устройствами")
+Component(provision, "Provisioning Manager", "Go", "Процесс подключения устройства")
+Component(adapter, "Protocol Adapter Layer", "Go", "Работа с протоколами устройств")
+Component(state, "Device State Manager", "Go", "Хранение и обновление статуса устройств")
+Component(tele_pub, "Telemetry Publisher", "Go", "Публикация данных в брокер")
+Component(repo, "Device Repository", "PostgreSQL", "Доступ к БД")
+
+Rel(api, provision, "Вызывает")
+Rel(provision, adapter, "Передаёт команды")
+Rel(adapter, state, "Обновляет состояние")
+Rel(state, tele_pub, "Посылает телеметрию")
+Rel(repo, state, "DB доступ")
+
+@enduml

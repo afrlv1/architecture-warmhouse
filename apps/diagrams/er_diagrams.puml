@@ -1,0 +1,120 @@
+@startuml
+' ER-диаграмма логической модели умного дома
+
+entity "User" as user {
+  * id : UUID
+  --
+  email : varchar
+  password_hash : varchar
+  full_name : varchar
+  status : varchar
+  created_at : timestamp
+}
+
+entity "House" as house {
+  * id : UUID
+  --
+  user_id : UUID <<FK>>
+  name : varchar
+  address : varchar
+  timezone : varchar
+  created_at : timestamp
+}
+
+entity "Module" as module {
+  * id : UUID
+  --
+  code : varchar
+  name : varchar
+  description : text
+  is_active : boolean
+}
+
+entity "DeviceType" as devtype {
+  * id : UUID
+  --
+  module_id : UUID <<FK>>
+  name : varchar
+  vendor : varchar
+  model : varchar
+  protocol : varchar
+  capabilities : json
+  created_at : timestamp
+}
+
+entity "Device" as device {
+  * id : UUID
+  --
+  device_type_id : UUID <<FK>>
+  house_id : UUID <<FK>>
+  serial_number : varchar
+  name : varchar
+  status : varchar
+  last_seen_at : timestamp
+  firmware_version : varchar
+  location : varchar
+  created_at : timestamp
+}
+
+entity "TelemetryData" as telemetry {
+  * id : bigserial
+  --
+  device_id : UUID <<FK>>
+  timestamp : timestamp
+  metric_type : varchar
+  value_number : numeric
+  value_text : varchar
+  raw_payload : json
+}
+
+entity "Scenario" as scenario {
+  * id : UUID
+  --
+  user_id : UUID <<FK>>
+  house_id : UUID <<FK>>
+  name : varchar
+  description : text
+  is_active : boolean
+  created_at : timestamp
+}
+
+entity "ScenarioCondition" as scen_cond {
+  * id : UUID
+  --
+  scenario_id : UUID <<FK>>
+  device_id : UUID <<FK>>  ' nullable
+  metric_type : varchar
+  operator : varchar
+  value : varchar
+}
+
+entity "ScenarioAction" as scen_act {
+  * id : UUID
+  --
+  scenario_id : UUID <<FK>>
+  target_device_id : UUID <<FK>>
+  command : varchar
+  command_payload : json
+}
+
+' Связи
+
+user ||--o{ house : "владеет"
+user ||--o{ scenario : "создаёт"
+
+house ||--o{ device : "содержит"
+house ||--o{ scenario : "используется в"
+
+module ||--o{ devtype : "определяет типы"
+
+devtype ||--o{ device : "тип для"
+
+device ||--o{ telemetry : "генерирует"
+
+scenario ||--o{ scen_cond : "имеет условия"
+scenario ||--o{ scen_act : "имеет действия"
+
+device ||--o{ scen_cond : "используется в условии"
+device ||--o{ scen_act : "цель действия"
+
+@enduml
