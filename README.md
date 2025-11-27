@@ -11,15 +11,15 @@
 
 Работа включает:
 
-анализ текущего монолита и выделение доменов;
+- анализ текущего монолита и выделение доменов;
 
-проектирование микросервисной архитектуры (C4: Context, Containers, Components, Code);
+- проектирование микросервисной архитектуры (C4: Context, Containers, Components, Code);
 
-разработку ER-диаграммы;
+- разработку ER-диаграммы;
 
-документирование API (REST + AsyncAPI);
+- документирование API (REST + AsyncAPI);
 
-реализацию и упаковку сервиса temperature-api в Docker + настройку Postgres для smart_home.
+- реализацию и упаковку сервиса temperature-api в Docker + настройку Postgres для smart_home.
 
 </aside>
 
@@ -128,10 +128,9 @@
 
 ## 5. Визуализация контекста системы — диаграмма С4
 
-[Диаграмма контейнеров](apps/diagrams/as_is.puml)
+[Диаграмма  As Is](apps/diagrams/as_is.puml)
 
 # Задание 2. Проектирование микросервисной архитектуры
-
 
 **Диаграмма контейнеров (Containers)**
 
@@ -143,7 +142,7 @@
 
 **Диаграмма кода (Code)**
 
-[Диаграмма компонентов](apps/diagrams/c4-code_level.puml)
+[Диаграмма кода](apps/diagrams/c4-code_level.puml)
 
 # Задание 3. Разработка ER-диаграммы
 
@@ -151,13 +150,238 @@
 
 # Задание 4. Создание и документирование API
 
-### 1. Тип API
+После разработки ER-диаграммы и микросервисной архитектуры необходимо определить API, при помощи которого микросервисы будут взаимодействовать друг с другом. Ниже представлены выбор типов API, описание 4 REST-эндпоинтов и спецификация событийного канала для телеметрии.
 
-Укажите, какой тип API вы будете использовать для взаимодействия микросервисов. Объясните своё решение.
+---
 
-### 2. Документация API
+## 1. Типы API
 
-Здесь приложите ссылки на документацию API для микросервисов, которые вы спроектировали в первой части проектной работы. Для документирования используйте Swagger/OpenAPI или AsyncAPI.
+В системе используется два вида API — REST и событийный:
+
+### 1.1. REST API (OpenAPI)
+
+Используется для синхронного взаимодействия, когда требуется немедленный результат операции. Подходит для:
+
+- CRUD-операций с сущностями (устройства, сценарии, пользователи);
+- отправки команд доменным сервисам (например, Heating, Lighting);
+- работы через API Gateway.
+
+Документируется через **Swagger/OpenAPI**.
+
+### 1.2. AsyncAPI (Событийный API)
+
+Используется для асинхронного взаимодействия, при котором не требуется мгновенный ответ. Применяется для:
+
+- получения телеметрии от устройств;
+- оповещения сервисов (Scenario, Telemetry);
+- событий типа «устройство отправило показания».
+
+Документируется с помощью **AsyncAPI**.
+
+---
+
+## 2. REST API (4 ключевых эндпоинта)
+
+Ниже представлены 4 основных REST-эндпоинта, обеспечивающих взаимодействие микросервисов.
+
+---
+
+### 2.1. POST /devices — регистрация устройства
+
+**Назначение**  
+Регистрация нового устройства и привязка его к дому.
+
+**Метод**  
+`POST /devices`
+
+**Пример запроса (JSON)**
+
+```json
+{
+  "device_type_id": "type-123",
+  "house_id": "house-001",
+  "serial_number": "SN-7784",
+  "name": "Термостат гостиная"
+}
+```
+
+**Пример ответа (JSON)**
+
+```json
+{
+  "id": "dev-555",
+  "device_type_id": "type-123",
+  "house_id": "house-001",
+  "serial_number": "SN-7784",
+  "name": "Термостат гостиная",
+  "status": "offline",
+  "created_at": "2025-01-01T12:00:00Z"
+}
+
+```
+**Коды ответа**
+
+- `201 Created`
+- `400 Bad Request`
+- `409 Conflict`
+- `500 Internal Server Error`
+
+### 2.2. GET /devices/{id} — получение информации об устройстве
+
+**Назначение**  
+Получение информации об устройстве по его идентификатору.
+
+**Метод**  
+`GET /devices/{id}`
+
+**Пример ответа (200 OK)**
+
+```json
+{
+  "id": "dev-555",
+  "device_type_id": "type-123",
+  "house_id": "house-001",
+  "serial_number": "SN-7784",
+  "name": "Термостат гостиная",
+  "status": "online",
+  "last_seen_at": "2025-01-01T12:05:00Z",
+  "firmware_version": "1.0.2"
+}
+```
+**Коды ответа**
+
+- `200 OK`
+- `404 Not Found`
+- `500 Internal Server Error`
+
+### 2.3. POST /devices/{id}/command — отправка команды устройству
+
+**Назначение**  
+Передача команды управляющему устройству.
+
+**Метод**  
+`POST /devices/{id}/command`
+
+**Пример запроса**
+
+```json
+{
+  "command": "SET_TEMPERATURE",
+  "payload": {
+    "target_temp": 22.5
+  }
+}
+```
+**Пример ответа**
+
+```json
+{
+  "device_id": "dev-555",
+  "command": "SET_TEMPERATURE",
+  "status": "accepted",
+  "queued_at": "2025-01-01T12:06:00Z"
+}
+```
+**Коды ответа**
+
+- `201 Created`
+- `400 Bad Request`
+- `404 Not Found`
+- `500 Internal Server Error`
+
+
+### 2.4. POST /scenarios — создание сценария автоматизации
+
+**Назначение**  
+Создание сценария, который реагирует на телеметрию и выполняет действия над устройствами.
+
+**Метод**  
+`POST /scenarios`
+
+**Пример запроса**
+
+```json
+{
+  "house_id": "house-001",
+  "name": "Night Heating",
+  "conditions": [
+    {
+      "device_id": "dev-555",
+      "metric_type": "temperature",
+      "operator": "<",
+      "value": "18"
+    }
+  ],
+  "actions": [
+    {
+      "target_device_id": "dev-555",
+      "command": "SET_TEMPERATURE",
+      "command_payload": {
+        "target_temp": 22
+      }
+    }
+  ]
+}
+```
+**Пример ответа**
+
+```json
+{
+  "id": "scn-1001",
+  "house_id": "house-001",
+  "name": "Night Heating",
+  "is_active": true,
+  "created_at": "2025-01-01T12:10:00Z"
+}
+
+```
+**Коды ответа**
+
+- `201 Created`
+- `400 Bad Request`
+- `404 Not Found`
+- `500 Internal Server Error`
+
+## 3. Событийный API (AsyncAPI)
+
+Телеметрия передаётся асинхронно через брокер сообщений (Kafka/RabbitMQ). Ниже описан основной канал.
+
+---
+
+### 3.1. Канал `telemetry.device.data`
+
+**Назначение**  
+Передача телеметрии от устройств (температура, состояние, события).
+
+**Тип взаимодействия**  
+Publisher → Subscribers
+
+- **Publisher:** устройство или Device Management  
+- **Subscribers:** Telemetry Service, Scenario Service  
+
+---
+
+**Формат сообщения**
+
+```json
+{
+  "device_id": "dev-555",
+  "timestamp": "2025-01-01T12:00:00Z",
+  "metric_type": "temperature",
+  "value_number": 21.7,
+  "value_text": null,
+  "raw_payload": {
+    "temp_raw": 217
+  }
+}
+```
+[device-management.yaml](apps/docs/device-management.yaml)
+[heating.yaml](apps/docs/heating.yaml)
+[lighting.yaml](apps/docs/lighting.yaml)
+[gates.yaml](apps/docs/gates.yaml)
+[scenario.yaml](apps/docs/scenario.yaml)
+[telemetry.yaml](apps/docs/telemetry.yaml)
+
 
 # Задание 5. Работа с docker и docker-compose
 
