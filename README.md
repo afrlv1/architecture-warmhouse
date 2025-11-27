@@ -383,55 +383,89 @@ Publisher → Subscribers
 [telemetry.yaml](apps/docs/telemetry.yaml)
 
 
-# Задание 5. Работа с docker и docker-compose
+# Задание 5. Работа с Docker и Docker-Compose
 
-Перейдите в apps.
+## 1. Реализовано приложение `temperature-api`
 
-Там находится приложение-монолит для работы с датчиками температуры. В README.md описано как запустить решение.
+Создано отдельное приложение, эмулирующее работу датчика температуры.  
+Оно предоставляет эндпоинт:
 
-Вам нужно:
+`GET /temperature?location=<name>&sensorId=<id>`
 
-1) сделать простое приложение temperature-api на любом удобном для вас языке программирования, которое при запросе /temperature?location= будет отдавать рандомное значение температуры.
+Реализованы правила:
 
-Locations - название комнаты, sensorId - идентификатор названия комнаты
+- если `location` не указана — выбирается значение по умолчанию на основе `sensorId`;
+- если `sensorId` не указан — он определяется на основе `location`;
+- при каждом запросе генерируется **случайная температура**, что обеспечивает корректную работу операций:
+  - **Create Sensor**
+  - **Get All Sensors**  
+  в Postman-коллекции.
 
-```
-	// If no location is provided, use a default based on sensor ID
-	if location == "" {
-		switch sensorID {
-		case "1":
-			location = "Living Room"
-		case "2":
-			location = "Bedroom"
-		case "3":
-			location = "Kitchen"
-		default:
-			location = "Unknown"
-		}
-	}
+## 2. Приложение упаковано в Docker
 
-	// If no sensor ID is provided, generate one based on location
-	if sensorID == "" {
-		switch location {
-		case "Living Room":
-			sensorID = "1"
-		case "Bedroom":
-			sensorID = "2"
-		case "Kitchen":
-			sensorID = "3"
-		default:
-			sensorID = "0"
-		}
-	}
+Для `temperature-api` создан Dockerfile.  
+Контейнер запускается на порту **8081**.
+
+## 3. Настроен PostgreSQL для приложения `smart_home`
+
+В `docker-compose.yml` добавлен сервис `postgres` с конфигурацией:
+
+- имя базы: `smart_home`
+- пользователь: `smart_home`
+- пароль: `smart_home`
+- автоматическая инициализация через скрипт:
+
+```bash
+./smart_home/init.sql → /docker-entrypoint-initdb.d/init.sql
 ```
 
-2) Приложение следует упаковать в Docker и добавить в docker-compose. Порт по умолчанию должен быть 8081
+## 4. Все сервисы добавлены в docker-compose
 
-3) Кроме того для smart_home приложения требуется база данных - добавьте в docker-compose файл настройки для запуска postgres с указанием скрипта инициализации ./smart_home/init.sql
+В итоговый compose входят:
 
-Для проверки можно использовать Postman коллекцию smarthome-api.postman_collection.json и вызвать:
+- `postgres`  
+- `temperature-api`  
+- `smarthome-app`  
 
-- Create Sensor
-- Get All Sensors
+Настроены:
 
-Должно при каждом вызове отображаться разное значение температуры
+- переменные окружения,
+- depends_on,
+- единая сеть,
+- порты сервисов.
+
+## 5. Инструкция по запуску
+
+### Шаг 1. Перейти в директорию проекта
+
+```shell
+cd apps
+```
+
+
+### Шаг 2. Собрать и запустить все контейнеры
+
+```shell
+docker-compose up --build 
+```
+
+### Шаг 3. Проверить работу сервисов
+
+- PostgreSQL → порт **5432**  
+- temperature-api → порт **8081**  
+- smart_home → порт **8080**
+
+### Шаг 4. Проверить работу через Postman
+
+Использовать коллекцию:
+
+```
+smarthome-api.postman_collection.json
+```
+Выполнить запросы:
+
+- **Create Sensor**  
+- **Get All Sensors**
+
+Результат:  
+при каждом вызове должны отображаться **разные значения температуры**, что подтверждает корректную работу `temperature-api`.
